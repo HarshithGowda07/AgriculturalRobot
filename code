@@ -1,0 +1,191 @@
+#include <Servo.h>
+
+// Define motor pins
+#define motorA1 2
+#define motorA2 3
+#define motorB1 4
+#define motorB2 5
+
+// Define sensor pins
+#define leftLineSensor A0
+#define middleLineSensor A1
+#define rightLineSensor A2
+#define plantSensor 6
+#define soilMoistureSensor A3
+#define rainSensor A4
+#define npkSensor A5
+
+// Define actuator pins
+#define waterValve 7
+#define fertilizerValve 8
+#define pesticideValve 9
+#define pesticidePump 10
+
+// Define thresholds
+#define soilMoistureThreshold 500  // Adjust based on sensor calibration
+#define rainThreshold 300          // Adjust based on sensor calibration
+#define npkThresholdLow 100        // Adjust based on sensor calibration
+#define npkThresholdHigh 900       // Adjust based on sensor calibration
+
+// Define line-following thresholds
+#define lineThreshold 500          // Adjust based on sensor calibration
+
+// Create servo object for pesticide sprayer (if used)
+Servo sprayerServo;
+
+// Variables for plant detection and rain handling
+bool isRaining = false;
+bool plantDetected = false;
+
+void setup() {
+  // Initialize motor pins as output
+  pinMode(motorA1, OUTPUT);
+  pinMode(motorA2, OUTPUT);
+  pinMode(motorB1, OUTPUT);
+  pinMode(motorB2, OUTPUT);
+
+  // Initialize actuator pins as output
+  pinMode(waterValve, OUTPUT);
+  pinMode(fertilizerValve, OUTPUT);
+  pinMode(pesticideValve, OUTPUT);
+  pinMode(pesticidePump, OUTPUT);
+
+  // Initialize sensor pins as input
+  pinMode(leftLineSensor, INPUT);
+  pinMode(middleLineSensor, INPUT);
+  pinMode(rightLineSensor, INPUT);
+  pinMode(plantSensor, INPUT);
+  pinMode(soilMoistureSensor, INPUT);
+  pinMode(rainSensor, INPUT);
+  pinMode(npkSensor, INPUT);
+
+  // Attach servo (if used)
+  sprayerServo.attach(11);  // Attach servo to pin 11
+
+  // Start serial communication for debugging
+  Serial.begin(9600);
+}
+
+void loop() {
+  // Check rain sensor
+  int rainValue = analogRead(rainSensor);
+  if (rainValue < rainThreshold) {
+    isRaining = true;
+    stopAllProcesses();
+    returnToInitialPosition();
+    return;  // Stop all processes if it's raining
+  } else {
+    isRaining = false;
+  }
+
+  // Line-following logic
+  followLine();
+
+  // Check plant sensor
+  if (digitalRead(plantSensor) == HIGH) {
+    plantDetected = true;
+    stopMotors();  // Stop the robot when a plant is detected
+    processPlant(); // Perform soil moisture, NPK, and pesticide tasks
+    plantDetected = false;
+  }
+}
+
+// Function to follow the line
+void followLine() {
+  int leftValue = analogRead(leftLineSensor);
+  int middleValue = analogRead(middleLineSensor);
+  int rightValue = analogRead(rightLineSensor);
+
+  if (middleValue > lineThreshold) {
+    moveForward();  // Move forward if the middle sensor detects the line
+  } else if (leftValue > lineThreshold) {
+    turnLeft();     // Turn left if the left sensor detects the line
+  } else if (rightValue > lineThreshold) {
+    turnRight();    // Turn right if the right sensor detects the line
+  } else {
+    stopMotors();   // Stop if no line is detected
+  }
+}
+
+// Function to process plant tasks
+void processPlant() {
+  // Soil moisture check
+  int soilMoistureValue = analogRead(soilMoistureSensor);
+  if (soilMoistureValue < soilMoistureThreshold) {
+    digitalWrite(waterValve, HIGH);  // Open water valve
+    delay(5000);  // Dispense water for 5 seconds (adjust as needed)
+    digitalWrite(waterValve, LOW);   // Close water valve
+  }
+
+  // NPK check
+  int npkValue = analogRead(npkSensor);
+  if (npkValue < npkThresholdLow) {
+    digitalWrite(fertilizerValve, HIGH);  // Open fertilizer valve
+    delay(2000);  // Dispense fertilizer for 2 seconds (adjust as needed)
+    digitalWrite(fertilizerValve, LOW);   // Close fertilizer valve
+  }
+
+  // Pesticide spraying
+  digitalWrite(pesticideValve, HIGH);  // Open pesticide valve
+  digitalWrite(pesticidePump, HIGH);   // Turn on pesticide pump
+  delay(3000);  // Spray pesticide for 3 seconds (adjust as needed)
+  digitalWrite(pesticidePump, LOW);    // Turn off pesticide pump
+  digitalWrite(pesticideValve, LOW);   // Close pesticide valve
+}
+
+// Function to stop all processes
+void stopAllProcesses() {
+  digitalWrite(waterValve, LOW);
+  digitalWrite(fertilizerValve, LOW);
+  digitalWrite(pesticideValve, LOW);
+  digitalWrite(pesticidePump, LOW);
+  stopMotors();
+}
+
+// Function to return to initial position
+void returnToInitialPosition() {
+  // Logic to return to the initial position (e.g., reverse for a fixed duration)
+  moveBackward();
+  delay(5000);  // Reverse for 5 seconds (adjust as needed)
+  stopMotors();
+}
+
+// Function to move the bot forward
+void moveForward() {
+  digitalWrite(motorA1, HIGH);
+  digitalWrite(motorA2, LOW);
+  digitalWrite(motorB1, HIGH);
+  digitalWrite(motorB2, LOW);
+}
+
+// Function to move the bot backward
+void moveBackward() {
+  digitalWrite(motorA1, LOW);
+  digitalWrite(motorA2, HIGH);
+  digitalWrite(motorB1, LOW);
+  digitalWrite(motorB2, HIGH);
+}
+
+// Function to turn left
+void turnLeft() {
+  digitalWrite(motorA1, LOW);
+  digitalWrite(motorA2, HIGH);
+  digitalWrite(motorB1, HIGH);
+  digitalWrite(motorB2, LOW);
+}
+
+// Function to turn right
+void turnRight() {
+  digitalWrite(motorA1, HIGH);
+  digitalWrite(motorA2, LOW);
+  digitalWrite(motorB1, LOW);
+  digitalWrite(motorB2, HIGH);
+}
+
+// Function to stop the bot
+void stopMotors() {
+  digitalWrite(motorA1, LOW);
+  digitalWrite(motorA2, LOW);
+  digitalWrite(motorB1, LOW);
+  digitalWrite(motorB2, LOW);
+}
