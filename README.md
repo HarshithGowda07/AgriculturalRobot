@@ -30,15 +30,6 @@ The bot aims to:
 ## Working Principle
 The bot uses IR sensors to follow a line, detects plants using a plant sensor, and performs tasks like irrigation, fertilization, and pesticide spraying based on sensor inputs. It stops all operations and returns to its initial position if rain is detected.
 
-## Code
-The Arduino code for this project can be found in the `solar_agricultural_bot.ino` file.
-
-## Circuit Diagram
-![Circuit Diagram](circuit_diagram.png)
-
-## Images/Videos
-![Bot in Action](bot_image.jpg)
-
 ## Future Enhancements
 1. Obstacle avoidance using ultrasonic sensors.
 2. Remote monitoring using IoT.
